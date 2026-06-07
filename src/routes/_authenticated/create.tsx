@@ -176,7 +176,10 @@ function Create() {
   const renderPng = async (resolution: Resolution): Promise<string> => {
     const node = ref.current!;
     const originalBg = node.style.background;
-    // Try to inline bg as data URL to avoid CORS taint
+    // Temporarily strip the green frame border so it doesn't appear in downloads
+    const frame = node.querySelector<HTMLElement>("[data-table-frame]");
+    const originalBorder = frame?.style.border ?? "";
+    if (frame) frame.style.border = "none";
     try {
       if (tpl?.image_url) {
         const dataUrl = await fetchAsDataUrl(tpl.image_url);
@@ -195,7 +198,6 @@ function Create() {
       try {
         return await toPng(node, opts);
       } catch (firstErr) {
-        // Fallback: drop the (possibly tainted) background and retry
         node.style.background = NONE_BG;
         try {
           return await toPng(node, opts);
@@ -205,6 +207,7 @@ function Create() {
       }
     } finally {
       node.style.background = originalBg;
+      if (frame) frame.style.border = originalBorder;
     }
   };
 
