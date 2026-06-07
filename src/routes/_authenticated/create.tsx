@@ -176,7 +176,10 @@ function Create() {
   const renderPng = async (resolution: Resolution): Promise<string> => {
     const node = ref.current!;
     const originalBg = node.style.background;
-    // Try to inline bg as data URL to avoid CORS taint
+    // Temporarily strip the green frame border so it doesn't appear in downloads
+    const frame = node.querySelector<HTMLElement>("[data-table-frame]");
+    const originalBorder = frame?.style.border ?? "";
+    if (frame) frame.style.border = "none";
     try {
       if (tpl?.image_url) {
         const dataUrl = await fetchAsDataUrl(tpl.image_url);
@@ -195,7 +198,6 @@ function Create() {
       try {
         return await toPng(node, opts);
       } catch (firstErr) {
-        // Fallback: drop the (possibly tainted) background and retry
         node.style.background = NONE_BG;
         try {
           return await toPng(node, opts);
@@ -205,6 +207,7 @@ function Create() {
       }
     } finally {
       node.style.background = originalBg;
+      if (frame) frame.style.border = originalBorder;
     }
   };
 
@@ -349,17 +352,16 @@ function Create() {
       return toast.error("You need credits to download. Buy a pack from the Credits page.");
     }
 
-    // Render PNG — try canvas first, fall back to html-to-image, then a minimal canvas.
-    // This block NEVER throws to the user; we always end up with a data URL.
+    // Render PNG from the actual preview DOM so download === preview exactly.
     let pngDataUrl = "";
     try {
-      pngDataUrl = await drawFallbackPng(resolution);
-    } catch (canvasErr) {
-      console.warn("Canvas renderer failed, trying html-to-image:", canvasErr);
+      pngDataUrl = await renderPng(resolution);
+    } catch (htiErr) {
+      console.warn("html-to-image failed, falling back to canvas:", htiErr);
       try {
-        pngDataUrl = await renderPng(resolution);
-      } catch (htiErr) {
-        console.warn("html-to-image failed, using minimal canvas:", htiErr);
+        pngDataUrl = await drawFallbackPng(resolution);
+      } catch (canvasErr) {
+        console.warn("Canvas renderer failed, using minimal canvas:", canvasErr);
         const c = document.createElement("canvas");
         c.width = CANVAS_W; c.height = CANVAS_H;
         const cx = c.getContext("2d");
@@ -613,19 +615,19 @@ function Create() {
               <p className="text-center uppercase mt-2" style={{ letterSpacing: 6, fontSize: 18, color: textColor, opacity: 0.85 }}>
                 Official Point Table
               </p>
-              <div className="mt-10 rounded-2xl overflow-hidden"
+              <div data-table-frame className="mt-10 rounded-2xl overflow-hidden"
                 style={{
                   background: tpl ? "rgba(0,0,0,0.35)" : "rgba(15,23,42,0.6)",
                   backdropFilter: "blur(10px)",
                   border: `1px solid ${accent}40`,
                 }}>
-                <div className="grid items-center px-6 py-4 font-bold uppercase"
-                  style={{ gridTemplateColumns: "80px 64px 1fr 90px 90px 110px 110px", fontSize: 16, color: tagColor, background: `${tagColor}1A`, letterSpacing: 2 }}>
+                <div className="grid items-center px-6 py-5 font-black uppercase whitespace-nowrap"
+                  style={{ gridTemplateColumns: "90px 70px 1fr 100px 100px 130px 130px", fontSize: 24, color: tagColor, background: `${tagColor}1A`, letterSpacing: 3 }}>
                   <div>Rank</div><div>Logo</div><div>Team</div><div className="text-center">Kills</div><div className="text-center">Pos</div><div className="text-center" style={{ color: "#fb923c" }}>Booyah</div><div className="text-right">Total</div>
                 </div>
                 {ranked.map((r, i) => (
-                  <div key={r.idx} className="grid items-center px-6 py-3"
-                    style={{ gridTemplateColumns: "80px 64px 1fr 90px 90px 110px 110px", fontSize: 20, borderTop: "1px solid rgba(255,255,255,0.08)", background: i === 0 ? `${tagColor}14` : "transparent" }}>
+                  <div key={r.idx} className="grid items-center px-6 py-3 whitespace-nowrap"
+                    style={{ gridTemplateColumns: "90px 70px 1fr 100px 100px 130px 130px", fontSize: 20, borderTop: "1px solid rgba(255,255,255,0.08)", background: i === 0 ? `${tagColor}14` : "transparent" }}>
                     <div className="font-black" style={{ fontSize: 24, color: i === 0 ? tagColor : textColor, textShadow: i === 0 ? `0 0 14px ${tagColor}99` : "none" }}>#{i + 1}</div>
                     <div className="flex items-center">
                       {r.logo ? (
