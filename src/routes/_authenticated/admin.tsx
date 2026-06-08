@@ -397,9 +397,7 @@ function TemplatesTab() {
       const path = `${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.\-_]/g, "_")}`;
       const { error: upErr } = await supabase.storage.from("templates").upload(path, file, { upsert: false });
       if (upErr) throw upErr;
-      const { data: signed, error: sErr } = await supabase.storage.from("templates").createSignedUrl(path, 60 * 60 * 24 * 365 * 10);
-      if (sErr || !signed) throw sErr ?? new Error("Sign failed");
-      const { error: insErr } = await supabase.from("templates").insert({ name, image_url: signed.signedUrl, premium, accent_color: accent });
+      const { error: insErr } = await supabase.from("templates").insert({ name, image_url: path, premium, accent_color: accent });
       if (insErr) throw insErr;
       toast.success("Template uploaded");
       setName(""); setFile(null); setPremium(false); setAccent("#34d399");
@@ -449,10 +447,8 @@ function TemplatesTab() {
       const path = `ai-${Date.now()}.png`;
       const { error: upErr } = await supabase.storage.from("templates").upload(path, blob, { upsert: false, contentType: blob.type || "image/png" });
       if (upErr) throw upErr;
-      const { data: signed, error: sErr } = await supabase.storage.from("templates").createSignedUrl(path, 60 * 60 * 24 * 365 * 10);
-      if (sErr || !signed) throw sErr ?? new Error("Sign failed");
       const { error: insErr } = await supabase.from("templates").insert({
-        name: aiName, image_url: signed.signedUrl, premium: aiPremium, accent_color: aiAccent,
+        name: aiName, image_url: path, premium: aiPremium, accent_color: aiAccent,
       });
       if (insErr) throw insErr;
       toast.success("AI template saved");
@@ -480,9 +476,7 @@ function TemplatesTab() {
       const path = `gen-${Date.now()}.png`;
       const { error: upErr } = await supabase.storage.from("templates").upload(path, blob, { contentType: blob.type || "image/png" });
       if (upErr) throw upErr;
-      const { data: signed, error: sErr } = await supabase.storage.from("templates").createSignedUrl(path, 60 * 60 * 24 * 365 * 10);
-      if (sErr || !signed) throw sErr ?? new Error("Sign failed");
-      const { error: insErr } = await supabase.from("templates").insert({ name: genName, image_url: signed.signedUrl, premium: genPremium, accent_color: genAccent });
+      const { error: insErr } = await supabase.from("templates").insert({ name: genName, image_url: path, premium: genPremium, accent_color: genAccent });
       if (insErr) throw insErr;
       toast.success("Saved");
       setGenPreview(null); setGenName(""); setGenPremium(false); setGenAccent("#f59e0b");
