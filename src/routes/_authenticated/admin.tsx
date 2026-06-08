@@ -378,8 +378,9 @@ function TemplatesTab() {
       const path = `${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.\-_]/g, "_")}`;
       const { error: upErr } = await supabase.storage.from("templates").upload(path, file, { upsert: false });
       if (upErr) throw upErr;
-      const { data: pub } = supabase.storage.from("templates").getPublicUrl(path);
-      const { error: insErr } = await supabase.from("templates").insert({ name, image_url: pub.publicUrl, premium, accent_color: accent });
+      const { data: signed, error: sErr } = await supabase.storage.from("templates").createSignedUrl(path, 60 * 60 * 24 * 365 * 10);
+      if (sErr || !signed) throw sErr ?? new Error("Sign failed");
+      const { error: insErr } = await supabase.from("templates").insert({ name, image_url: signed.signedUrl, premium, accent_color: accent });
       if (insErr) throw insErr;
       toast.success("Template uploaded");
       setName(""); setFile(null); setPremium(false); setAccent("#34d399");
@@ -429,9 +430,10 @@ function TemplatesTab() {
       const path = `ai-${Date.now()}.png`;
       const { error: upErr } = await supabase.storage.from("templates").upload(path, blob, { upsert: false, contentType: blob.type || "image/png" });
       if (upErr) throw upErr;
-      const { data: pub } = supabase.storage.from("templates").getPublicUrl(path);
+      const { data: signed, error: sErr } = await supabase.storage.from("templates").createSignedUrl(path, 60 * 60 * 24 * 365 * 10);
+      if (sErr || !signed) throw sErr ?? new Error("Sign failed");
       const { error: insErr } = await supabase.from("templates").insert({
-        name: aiName, image_url: pub.publicUrl, premium: aiPremium, accent_color: aiAccent,
+        name: aiName, image_url: signed.signedUrl, premium: aiPremium, accent_color: aiAccent,
       });
       if (insErr) throw insErr;
       toast.success("AI template saved");
@@ -459,8 +461,9 @@ function TemplatesTab() {
       const path = `gen-${Date.now()}.png`;
       const { error: upErr } = await supabase.storage.from("templates").upload(path, blob, { contentType: blob.type || "image/png" });
       if (upErr) throw upErr;
-      const { data: pub } = supabase.storage.from("templates").getPublicUrl(path);
-      const { error: insErr } = await supabase.from("templates").insert({ name: genName, image_url: pub.publicUrl, premium: genPremium, accent_color: genAccent });
+      const { data: signed, error: sErr } = await supabase.storage.from("templates").createSignedUrl(path, 60 * 60 * 24 * 365 * 10);
+      if (sErr || !signed) throw sErr ?? new Error("Sign failed");
+      const { error: insErr } = await supabase.from("templates").insert({ name: genName, image_url: signed.signedUrl, premium: genPremium, accent_color: genAccent });
       if (insErr) throw insErr;
       toast.success("Saved");
       setGenPreview(null); setGenName(""); setGenPremium(false); setGenAccent("#f59e0b");
@@ -619,8 +622,9 @@ function AiBatchTab() {
       const path = `batch-${Date.now()}-${idx}.png`;
       const { error: upErr } = await supabase.storage.from("templates").upload(path, blob, { contentType: blob.type || "image/png" });
       if (upErr) throw upErr;
-      const { data: pub } = supabase.storage.from("templates").getPublicUrl(path);
-      const { error: insErr } = await supabase.from("templates").insert({ name: it.name, image_url: pub.publicUrl, premium: it.premium, accent_color: it.accent });
+      const { data: signed, error: sErr } = await supabase.storage.from("templates").createSignedUrl(path, 60 * 60 * 24 * 365 * 10);
+      if (sErr || !signed) throw sErr ?? new Error("Sign failed");
+      const { error: insErr } = await supabase.from("templates").insert({ name: it.name, image_url: signed.signedUrl, premium: it.premium, accent_color: it.accent });
       if (insErr) throw insErr;
       setItems((xs) => xs.map((x, i) => i === idx ? { ...x, saved: true } : x));
       toast.success("Saved");
@@ -701,8 +705,9 @@ function NewAiTab() {
       const path = `variant-${Date.now()}-${idx}.png`;
       const { error: upErr } = await supabase.storage.from("templates").upload(path, blob, { contentType: blob.type || "image/png" });
       if (upErr) throw upErr;
-      const { data: pub } = supabase.storage.from("templates").getPublicUrl(path);
-      const { error: insErr } = await supabase.from("templates").insert({ name: it.name, image_url: pub.publicUrl, premium: it.premium, accent_color: it.accent });
+      const { data: signed, error: sErr } = await supabase.storage.from("templates").createSignedUrl(path, 60 * 60 * 24 * 365 * 10);
+      if (sErr || !signed) throw sErr ?? new Error("Sign failed");
+      const { error: insErr } = await supabase.from("templates").insert({ name: it.name, image_url: signed.signedUrl, premium: it.premium, accent_color: it.accent });
       if (insErr) throw insErr;
       setItems((xs) => xs.map((x, i) => i === idx ? { ...x, saved: true } : x));
       toast.success("Saved");
