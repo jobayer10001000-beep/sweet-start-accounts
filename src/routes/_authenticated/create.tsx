@@ -28,6 +28,19 @@ type Template = { id: string; name: string; image_url: string; accent_color: str
 const CANVAS_W = 1080;
 const CANVAS_H = 1350;
 const NONE_BG = "radial-gradient(ellipse at top, #0c1c3e 0%, #050813 70%)";
+const TEMPLATE_SIGNED_URL_SECONDS = 60 * 60 * 24 * 7;
+
+function templateStoragePath(value: string): string | null {
+  if (!value || value.startsWith("data:")) return null;
+  if (!value.startsWith("http")) return value.replace(/^\/+/, "").replace(/^templates\//, "");
+  try {
+    const path = new URL(value).pathname;
+    const match = path.match(/\/storage\/v1\/object\/(?:public|sign)\/templates\/(.+)$/);
+    return match ? decodeURIComponent(match[1]) : null;
+  } catch {
+    return null;
+  }
+}
 
 function fileToDataUrl(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -49,6 +62,7 @@ function Create() {
   const [tagColor, setTagColor] = useState("#f59e0b");
   const [tournamentLogo, setTournamentLogo] = useState<string | null>(null);
   const [tournamentLogoSize, setTournamentLogoSize] = useState(140);
+  const [tournamentLogoMode, setTournamentLogoMode] = useState<"behind" | "above">("behind");
   const [rows, setRows] = useState<Row[]>(
     Array.from({ length: 12 }, (_, i) => ({ name: `Team ${i + 1}`, kills: 0, pos: 0, booyah: 0, logo: null })),
   );
@@ -60,9 +74,19 @@ function Create() {
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    let mounted = true;
     supabase.from("templates").select("id,name,image_url,accent_color,premium")
       .eq("active", true).order("created_at", { ascending: false })
-      .then(({ data }) => setTemplates((data ?? []) as Template[]));
+      .then(async ({ data }) => {
+        const signed = await Promise.all(((data ?? []) as Template[]).map(async (t) => {
+          const path = templateStoragePath(t.image_url);
+          if (!path) return t;
+          const { data: url } = await supabase.storage.from("templates").createSignedUrl(path, TEMPLATE_SIGNED_URL_SECONDS);
+          return { ...t, image_url: url?.signedUrl ?? t.image_url, storage_path: path };
+        }));
+        if (mounted) setTemplates(signed);
+      });
+    return () => { mounted = false; };
   }, []);
 
   const loadUserThumbs = async () => {
