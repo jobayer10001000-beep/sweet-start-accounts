@@ -635,9 +635,7 @@ function AiBatchTab() {
       const path = `batch-${Date.now()}-${idx}.png`;
       const { error: upErr } = await supabase.storage.from("templates").upload(path, blob, { contentType: blob.type || "image/png" });
       if (upErr) throw upErr;
-      const { data: signed, error: sErr } = await supabase.storage.from("templates").createSignedUrl(path, 60 * 60 * 24 * 365 * 10);
-      if (sErr || !signed) throw sErr ?? new Error("Sign failed");
-      const { error: insErr } = await supabase.from("templates").insert({ name: it.name, image_url: signed.signedUrl, premium: it.premium, accent_color: it.accent });
+      const { error: insErr } = await supabase.from("templates").insert({ name: it.name, image_url: path, premium: it.premium, accent_color: it.accent });
       if (insErr) throw insErr;
       setItems((xs) => xs.map((x, i) => i === idx ? { ...x, saved: true } : x));
       toast.success("Saved");
@@ -718,9 +716,7 @@ function NewAiTab() {
       const path = `variant-${Date.now()}-${idx}.png`;
       const { error: upErr } = await supabase.storage.from("templates").upload(path, blob, { contentType: blob.type || "image/png" });
       if (upErr) throw upErr;
-      const { data: signed, error: sErr } = await supabase.storage.from("templates").createSignedUrl(path, 60 * 60 * 24 * 365 * 10);
-      if (sErr || !signed) throw sErr ?? new Error("Sign failed");
-      const { error: insErr } = await supabase.from("templates").insert({ name: it.name, image_url: signed.signedUrl, premium: it.premium, accent_color: it.accent });
+      const { error: insErr } = await supabase.from("templates").insert({ name: it.name, image_url: path, premium: it.premium, accent_color: it.accent });
       if (insErr) throw insErr;
       setItems((xs) => xs.map((x, i) => i === idx ? { ...x, saved: true } : x));
       toast.success("Saved");
